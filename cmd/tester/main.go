@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/flowcontrol"
 )
 
 func main() {
@@ -26,7 +27,8 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-	config.UserAgent = "tester/v1.0.0"
+	config.UserAgent = "api-killer/v1.0.0"
+	config.RateLimiter = flowcontrol.NewFakeNeverRateLimiter()
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -37,6 +39,7 @@ func main() {
 	for {
 		glog.Infof("Starting %d batch...", i)
 		setupSecretWatches(clientset, 200)
+		time.Sleep(50 * time.Millisecond)
 		i = i + 1
 	}
 
@@ -59,7 +62,7 @@ func setupSecretWatches(clientset *kubernetes.Clientset, limit int) {
 			select {
 			case event := <-watch.ResultChan():
 				glog.V(3).Infof("Got %v", event)
-			case <-time.After(5. * time.Minute):
+			case <-time.After(20 * time.Minute):
 				watch.Stop()
 			}
 		}()
