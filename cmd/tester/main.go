@@ -39,7 +39,7 @@ func main() {
 	for {
 		glog.Infof("Starting %d batch...", i)
 		setupSecretWatches(clientset, 200)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		i = i + 1
 	}
 
@@ -65,6 +65,13 @@ func setupSecretWatches(clientset *kubernetes.Clientset, limit int) {
 			case <-time.After(20 * time.Minute):
 				watch.Stop()
 			}
+		}()
+		go func() {
+			secrets, err := clientset.CoreV1().Secrets("").List(metav1.ListOptions{})
+			if err != nil {
+				glog.Errorf("Error listing: %v", err)
+			}
+			glog.V(3).Infof("Got %d secrets", len(secrets.Items))
 		}()
 	}
 }
